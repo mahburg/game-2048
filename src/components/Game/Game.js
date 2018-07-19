@@ -7,14 +7,28 @@ import { checkMoves, rotateArrays, collapse, checkDir } from '../../utils';
 class Game extends Component{
     constructor(props){
         super(props);
+        this.game = React.createRef();
         this.state = {
-            game: [[null, null, null, null], [null, null, null, null], [null, null, null, null], [null, null, null, null]]
+            game: [[null, null, null, null], [null, null, null, null], [null, null, null, null], [null, null, null, null]],
+            undo: [],
+            score: 0,
+            hiScore: 0
             // game: [[null, 2, 4, 8], [16, 32, 64, 128], [null, 512, 1024, 2048], [4096, null, null, 2]]
         }
     }
 
     componentDidMount() {
+        let hiScore = localStorage.getItem('hiScore')
+        if (hiScore){
+            this.setState({ hiScore });
+        } else {
+            localStorage.setItem('hiScore', 0);
+        }
         this.resetGame()
+        this.setFocus()
+    }
+    setFocus(){
+        this.game.current.focus()
     }
     resetGame() {
         let r1 = (~~(Math.random() * 4))
@@ -30,31 +44,66 @@ class Game extends Component{
         newGame[r1][c1] = v1;
         newGame[r2][c2] = v2;
         this.setState({ game: newGame });
+        this.setFocus()
+    }
+
+    undo(){
+        this.setState({ game: this.state.undo, undo: [] });
+        this.setFocus()
     }
 
     move(event){
         let { key } = event;
+        let newScore = 0;
         let tGame = this.state.game.slice();
+        let undo = this.state.game.slice();
+
         if(checkDir(tGame, key)){
             let moves = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight']
             if (moves.includes(key)){
                 switch (key){
                     case 'ArrowUp':
                         tGame = rotateArrays(tGame)
-                        tGame = rotateArrays(tGame.map(r=>collapse(r)))
+                        tGame = rotateArrays(tGame.map(r=>{
+                            let {gameState, score } = collapse(r)
+                            newScore += score;
+                            return gameState;
+                        }))
                         break;
                         case 'ArrowDown':
                         tGame = rotateArrays(tGame)
-                        tGame = rotateArrays(tGame.map(r=>collapse(r.slice().reverse()).reverse()))
+                        // tGame = rotateArrays(tGame.map(r=>collapse(r.slice().reverse()).reverse()))
+                        tGame = rotateArrays(tGame.map(r=>{
+                            let {gameState, score } = collapse(r.slice().reverse())
+                            newScore += score;
+                            return gameState.reverse();
+                        }))
                         break;
                     case 'ArrowLeft':
-                        tGame = tGame.map(r=>collapse(r))
+                        tGame = tGame.map(r=>{
+                            let {gameState, score } = collapse(r)
+                            newScore += score;
+                            return gameState;
+                        })
                         break;
                         case 'ArrowRight':
-                        tGame = tGame.map(r=>collapse(r.slice().reverse()).reverse())
+                        // tGame = tGame.map(r=>collapse(r.slice().reverse()).reverse())
+                        tGame = tGame.map(r=>{
+                            let {gameState, score } = collapse(r.slice().reverse())
+                            newScore += score;
+                            return gameState.reverse();
+                        })
                         break;
                     default:
                         break;
+                }
+                let newTotal = newScore + this.state.score;
+                if(newScore){
+                    this.setState({ score: newTotal });
+                }
+                if (newTotal > this.state.hiScore){
+                    localStorage.setItem('hiScore', newTotal)
+                    this.setState({ hiScore: newTotal });
                 }
                 let empty = []
                 for (let i = 0; i < tGame.length; i++){
@@ -68,7 +117,7 @@ class Game extends Component{
                     let next = empty[(~~(Math.random() * empty.length))];
                     let val = (~~(Math.random() * 2) + 0) ? 2 : 4;
                     tGame[next[0]][next[1]] = val;
-                    this.setState({ game: tGame }, ()=>{
+                    this.setState({ game: tGame, undo }, ()=>{
                         if(!checkMoves(tGame)){
                             alert('game over')
                         }
@@ -80,22 +129,37 @@ class Game extends Component{
                 }
             }
         }
+        this.setFocus()
+    }
+
+    resetHighScore(){
+        localStorage.setItem('hiScore', 0);
+        this.setState({ hiScore: 0 });
+        this.setFocus()
     }
 
     render(){
-        let { game } = this.state;
+        let { game, score, hiScore } = this.state;
         let board = game.map((row, i)=>row.map((tile, j)=><div className={`tile bg${tile}`} key={j} >{tile}</div>))
         return(
-            <div>
-                <br/>
+            <div className="game-container" >
+                <div className="game-left">
+                    <button className="reset" onClick={e=>this.resetGame()} >Reset</button>
+                    <button className="undo" onClick={e=>this.undo()} disabled={!this.state.undo.length} >Undo</button>
+                </div>
                 <div
                     className="grid"
                     onKeyDown={e=>this.move(e)}
                     tabIndex="0"
+                    ref={this.game}
                 >
                     {board}
                 </div>
-                <button onClick={e=>this.resetGame()} >Reset</button>
+                <div className="game-right">
+                    <h2>Score: {score}</h2>
+                    <h3>High Score: {hiScore}</h3>
+                    <button onClick={e=>this.resetHighScore()} >Reset High Score</button>
+                </div>
             </div>
         )
     }

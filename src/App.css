@@ -1,7 +1,9 @@
+body{
+  --gap: 14px;
+}
 .App {
   text-align: center;
 }
-
 header{
   background-color: #111;
   color: white;

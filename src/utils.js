@@ -1,7 +1,9 @@
 export function collapse(arr) {
+    let score = 0;
     let temp = arr.filter(c => c);
     for (let i = 0; i < temp.length; i++) {
         if (temp[i] === temp[i + 1]) {
+            score += temp[i] * 2
             temp[i] = temp[i] * 2;
             temp[i + 1] = null;
             i++;
@@ -11,7 +13,9 @@ export function collapse(arr) {
     while (temp.length < arr.length) {
         temp.push(null);
     }
-    return temp;
+    let output = {gameState: temp, score};
+    console.log(output)
+    return output;
 }
 
 export function rotateArrays(arr) {
